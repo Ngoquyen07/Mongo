@@ -5,6 +5,7 @@ import {Role} from "../models/Role.model.js";
 import config from "../config/auth.js";
 export const register = async (req, res) => {
     try{
+
         const user = new User({
             username: req.body.username,
             email: req.body.email,
@@ -35,7 +36,7 @@ export const login = async (req, res) => {
     try{
         const user = await User.findOne({email: req.body.email}).populate(
             "role"
-        )
+        ).select('+password')
         if (!user) {
             return res.status(401).json({
                 message: `Email ${req.body.email} not found`,
@@ -66,6 +67,7 @@ export const login = async (req, res) => {
     }
     catch(err){
         return res.status(500).json({
+            success:false,
             message: err.message,
         })
     }

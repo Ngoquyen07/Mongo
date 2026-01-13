@@ -3,7 +3,10 @@ const {schema} = mongoose;
 const UserSchema = new Schema({
         username : String,
         email : String,
-        password: String,
+        password: {
+          type: String,
+          select: false
+        },
         role : {
             type: Schema.Types.ObjectId,
             ref: 'Role'
@@ -18,7 +21,7 @@ const UserSchema = new Schema({
         toObject: { virtuals: true },
         timestamps: true
     });
-UserSchema.virtual('Employees',{
+UserSchema.virtual('employees',{
     ref : 'User',
     localField: '_id',
     foreignField: 'manager',

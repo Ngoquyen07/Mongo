@@ -1,6 +1,6 @@
 import {User} from "../models/User.model.js";
 
-const ROLES = ["admin","manager","employee"]
+const ROLES = ["manager","employee"]
 
 export const checkSignupRequirements = async (req, res, next) => {
     try {
@@ -12,12 +12,9 @@ export const checkSignupRequirements = async (req, res, next) => {
             return res.status(400).json({ success: false, message: "Password do not match!" });
         }
         const existingUser = await User.findOne({
-            $or: [{ username: username }, { email: email }]
+            $or: [{ email: email }]
         });
         if (existingUser) {
-            if (existingUser.username === username) {
-                return res.status(400).json({ success: false, message: "Failed! Username is already in use!" });
-            }
             if (existingUser.email === email) {
                 return res.status(400).json({ success: false, message: "Failed! Email is already in use!" });
             }
