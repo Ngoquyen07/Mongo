@@ -2,27 +2,25 @@ import {User} from "../models/User.model.js";
 
 const ROLES = ["admin","manager","employee"]
 
-export const checkDuplicateUsernameOrEmail = async (req, res, next) => {
+export const checkSignupRequirements = async (req, res, next) => {
     try {
-        // Check if username exists
-        const userByUsername = await User.findOne({ username: req.body.username });
-        if (userByUsername) {
-            return res
-                .status(400)
-                .json({ message: "Failed! Username is already in use!" });
-        }
-
-        // Check if email exists
-        const userByEmail = await User.findOne({ email: req.body.email });
-        if (userByEmail) {
-            return res.status(400).json({ message: "Failed! Email is already in use!" });
-        }
-
-        // Check password validation
-
-        const password = req.body.password;
+        const { username, email, password, confirmPassword } = req.body;
         if(!password){
-            return res.status(400).json({ message: "Password field is required!" });
+            return res.status(400).json({ success: false, message: "Password field is required!" });
+        }
+        if(password !== confirmPassword){
+            return res.status(400).json({ success: false, message: "Password do not match!" });
+        }
+        const existingUser = await User.findOne({
+            $or: [{ username: username }, { email: email }]
+        });
+        if (existingUser) {
+            if (existingUser.username === username) {
+                return res.status(400).json({ success: false, message: "Failed! Username is already in use!" });
+            }
+            if (existingUser.email === email) {
+                return res.status(400).json({ success: false, message: "Failed! Email is already in use!" });
+            }
         }
         next();
     } catch (err) {
@@ -32,10 +30,14 @@ export const checkDuplicateUsernameOrEmail = async (req, res, next) => {
 
 export const checkRoleExisted = (req, res, next) => {
     let { role } = req.body;
+    if(!role){
+        return res.status(400).json({success: false, message: "Role is required!" });
+    }
     role = role.toLowerCase();
     if (!ROLES.includes(role)) {
         return res.status(400).json({
-            message: `Failed! Role "${role}" does not exist!`,
+            success: false,
+            message: `Failed! Role '${role}' does not exist!`,
         });
     }
     next();

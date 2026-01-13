@@ -10,6 +10,7 @@ export const register = async (req, res) => {
             email: req.body.email,
             password: bcrypt.hashSync(req.body.password, 10),
         });
+
         const roleName = req.body.role || "employee";
 
         const roleDoc = await Role.findOne({ name: roleName });

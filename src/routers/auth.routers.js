@@ -3,7 +3,7 @@ import {register , login } from "../controllers/auth.controller.js";
 import validate from "../middlewares/validate.js";
 import {validateRegister} from "../validations/validateRegister.js";
 import {verifyToken , isAdmin , isManager } from "../middlewares/authJwt.js";
-import {checkDuplicateUsernameOrEmail , checkRoleExisted } from "../middlewares/verifyRegister.js";
+import {checkSignupRequirements , checkRoleExisted } from "../middlewares/verifyRegister.js";
 import {validateLogin} from "../validations/validateLogin.js";
 
 const router = express.Router();
@@ -12,7 +12,7 @@ router.post("/register",
     verifyToken,
     isAdmin,
     validate(validateRegister),
-    checkDuplicateUsernameOrEmail,
+    checkSignupRequirements,
     checkRoleExisted,
     register
 );
