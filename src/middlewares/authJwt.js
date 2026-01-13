@@ -29,16 +29,3 @@ export const verifyToken = async (req, res, next) => {
         })
     }
 }
-export const isAdmin = (req, res, next) => {
-    if (req.user && req.user.role && req.user.role.name === 'admin') {
-        return next();
-    }
-    return res.status(403).send({ message: "Require Admin Role!" });
-};
-
-export const isManager = (req, res, next) => {
-    if (req.user && req.user.role && req.user.role.name === 'manager') {
-        return next();
-    }
-    return res.status(403).send({ message: "Require Manager Role!" });
-};
