@@ -1,7 +1,31 @@
 import {User} from "../models/User.model.js";
 import {Role} from "../models/Role.model.js";
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+export const register = async (req, res) => {
+    try{
+        const user = new User({
+            username: req.body.username,
+            email: req.body.email,
+            password: bcrypt.hashSync(req.body.password, 10),
+        });
+        const roleName = req.body.role || "employee";
+        const roleDoc = await Role.findOne({ name: roleName });
+        user.role = roleDoc._id;
+        await user.save();
+        return res.status(201).json({
+            success: true,
+            message: `Register successfully`,
 
+        });
+    }
+    catch(err){
+        return res.status(500).json({
+            success: false,
+            message: err.message,
+        })
+    }
+}
 export const getAll = async(req,res)=>{
     try{
         const adminRole = await Role.findOne({ name: 'admin' });
@@ -19,6 +43,48 @@ export const getAll = async(req,res)=>{
         return res.status(400).send({
             success: false,
             message: err.message,
+        })
+    }
+}
+
+export const getManagers = async(req,res)=>{
+    try{
+        const managerRoleName = await Role.findOne({ name: 'manager' });
+        const managers = await User.find({
+            role: managerRoleName._id
+        }).populate('role').populate('employees')
+        return res.status(200).json({
+            success: true,
+            data: managers
+        })
+    }
+    catch(err){
+        return res.status(400).send({
+            success: false,
+            message: err.message,
+        })
+    }
+}
+export const getOrphanEmployee = async (req, res) => {
+    try{
+        const employeeRole = await Role.findOne({ name: 'employee' });
+        if(!employeeRole) return res.status(404).json({ success: false, message: "Role not found" });
+        const orphanEmployees = await User.find({
+            role:employeeRole._id,
+            $or: [
+                { manager: { $exists: false } },
+                { manager: null }
+            ]
+        }).populate('role')
+        return res.status(200).json({
+            success: true,
+            data: orphanEmployees,
+        })
+    }
+    catch (error) {
+        return res.status(400).send({
+            success: false,
+            message: error.message,
         })
     }
 }
@@ -95,29 +161,7 @@ export const updateUserRole = async (req, res) => {
     }
 };
 
-export const getOrphanEmployee = async (req, res) => {
-    try{
-        const employeeRole = await Role.findOne({ name: 'employee' });
-        if(!employeeRole) return res.status(404).json({ success: false, message: "Role not found" });
-        const orphanEmployees = await User.find({
-            role:employeeRole._id,
-            $or: [
-                { manager: { $exists: false } },
-                { manager: null }
-            ]
-        }).populate('role')
-        return res.status(200).json({
-            success: true,
-            data: orphanEmployees,
-        })
-    }
-    catch (error) {
-        return res.status(400).send({
-            success: false,
-            message: error.message,
-        })
-    }
-}
+
 
 export const assignEmployeesToManager = async (req, res) => {
     // Input : list of employee's ids and a manager's id .

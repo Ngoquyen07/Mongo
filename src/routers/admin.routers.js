@@ -1,5 +1,4 @@
 import express from "express";
-import {register } from "../controllers/auth.controller.js";
 import validate from "../middlewares/validate.js";
 import {validateRegister} from "../validations/validateRegister.js";
 import {verifyToken } from "../middlewares/authJwt.js";
@@ -9,7 +8,8 @@ import {
     assignEmployeesToManager, deleteStaff,
     getAll,
     getOrphanEmployee,
-    updateUserRole
+    updateUserRole,
+    register,getManagers
 } from "../controllers/admin.controller.js";
 export const adminRouter = express.Router();
 adminRouter.use(express.json());
@@ -21,7 +21,7 @@ adminRouter.post("/register",
     checkRoleExisted,
     register
 );
-adminRouter.get("/staffs",
+adminRouter.get("/staffs/getAll",
     verifyToken,
     authorize(['admin']),
     getAll
@@ -42,3 +42,7 @@ adminRouter.delete("/staffs/delete_user",
     verifyToken,
     authorize(['admin']),
     deleteStaff)
+adminRouter.get("/staffs/managers",
+    verifyToken,
+    authorize(['admin']),
+    getManagers)

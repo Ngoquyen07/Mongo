@@ -3,57 +3,46 @@ import bcrypt from "bcryptjs";
 import {User} from "../models/User.model.js";
 import {Role} from "../models/Role.model.js";
 import config from "../config/auth.js";
-export const register = async (req, res) => {
-    try{
 
-        const user = new User({
-            username: req.body.username,
-            email: req.body.email,
-            password: bcrypt.hashSync(req.body.password, 10),
-        });
-
-        const roleName = req.body.role || "employee";
-
-        const roleDoc = await Role.findOne({ name: roleName });
-
-        if (!roleDoc) {
-            return res.status(404).json({ message: `Role '${roleName}' not found` });
-        }
-        user.role = roleDoc._id;
-        await user.save();
-        return res.status(201).json({
-            message: `Register successfully`,
-
-        });
-    }
-    catch(err){
-        return res.status(500).json({
-            message: err.message,
-        })
-    }
-}
 export const login = async (req, res) => {
+    const {email, password} = req.body;
     try{
-        const user = await User.findOne({email: req.body.email}).populate(
+        const user = await User.findOne({email: email}).populate(
             "role"
         ).select('+password')
         if (!user) {
-            return res.status(401).json({
-                message: `Email ${req.body.email} not found`,
+            return res.status(400).json({
+                success: false,
+                errors: {
+                    email: ['Email does not exist!']
+                }
             })
         }
-        const isMatch = await bcrypt.compareSync(req.body.password , user.password);
+
+        const isMatch = bcrypt.compareSync(password, user.password);
+
         if (!isMatch) {
-            return res.status(401).json({
-                message: `Password not match`,
-                accessToken: null,
-            });
+            return res.status(400).json({
+                success: false,
+                errors: {
+                    password: ['Passwords do not match!']
+                }
+            })
         }
 
         const token = jwt.sign({id : user.id}, config.secretKey, {
             expiresIn: config.expiresIn,
             algorithm: "HS256",
         })
+        const refreshToken = jwt.sign({ id: user.id }, config.refreshKey, {
+            algorithm: "HS256",
+            expiresIn: '1d', // 24 hours
+        });
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            sameSite: 'strict',
+            secure: false
+        });
         return res.status(200).json({
             message: `Login successfully`,
             user: {
@@ -65,10 +54,45 @@ export const login = async (req, res) => {
             accessToken: token,
         });
     }
+    catch (err) {
+        return res.status(500).json({
+            success: false,
+            errors: {
+                _form: [err.message],
+            }
+        })
+    }
+}
+export const refreshToken = (req, res) => {
+    const refreshToken = req.cookies.refreshToken
+    if (!refreshToken) {
+        return res.status(401).json({ message: 'No refresh token' })
+    }
+
+    try {
+        const payload = jwt.verify(refreshToken, config.refreshKey)
+        const newAccessToken = jwt.sign(
+            { id: payload.id},
+            config.secretKey,
+            { expiresIn: config.expiresIn }
+        )
+        res.json({ accessToken: newAccessToken })
+    } catch {
+        return res.status(401).json({ message: 'Refresh token expired' })
+    }
+}
+
+export const logout = async (req, res) => {
+    try{
+        res.clearCookie('refreshToken');
+        return res.status(200).json({
+            message: `Logout successfully`,
+        })
+    }
     catch(err){
         return res.status(500).json({
             success:false,
-            message: err.message,
+            errors: err.message,
         })
     }
 }
