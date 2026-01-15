@@ -1,6 +1,6 @@
 export default {
     secretKey: process.env.SECRET_KEY,
-    expiresIn: 3600,
+    expiresIn: 600,
     refreshKey: process.env.REFRESH_KEY,
 
 }

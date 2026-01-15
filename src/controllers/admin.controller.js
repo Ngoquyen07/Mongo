@@ -20,9 +20,50 @@ export const register = async (req, res) => {
         });
     }
     catch(err){
-        return res.status(500).json({
+        return res.status(400).json({
             success: false,
             message: err.message,
+        })
+    }
+}
+export const getOverViewInfo = async (req, res) => {
+    try {
+        const adminRole = await Role.findOne({ name: 'admin' });
+        const staffs = await User.find({
+            role: { $ne: adminRole._id }
+        }).select('-__v').populate({
+            path:'role',
+            select: 'name'}).populate('employees').populate('manager')
+        const totalStaff = staffs.length
+
+        const totalManagers = staffs.filter(
+            u => u.role?.name === 'manager'
+        ).length
+
+        const totalEmployees = staffs.filter(
+            u => u.role?.name === 'employee'
+        ).length
+
+        const totalOrphans = staffs.filter(
+            u =>
+                u.role?.name === 'employee' &&
+                !u.manager
+        ).length
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                totalStaff,
+                totalManagers,
+                totalEmployees,
+                totalOrphans
+            }
+        })
+    }
+    catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: err.message
         })
     }
 }
@@ -38,6 +79,25 @@ export const getAll = async(req,res)=>{
             success: true,
             data: staffs
         });
+    }
+    catch(err){
+        return res.status(400).send({
+            success: false,
+            message: err.message,
+        })
+    }
+}
+
+export const getEmployees = async(req,res)=>{
+    try{
+        const managerRoleName = await Role.findOne({ name: 'employee' });
+        const managers = await User.find({
+            role: managerRoleName._id
+        }).populate('role').populate('manager', 'username email');
+        return res.status(200).json({
+            success: true,
+            data: managers
+        })
     }
     catch(err){
         return res.status(400).send({
@@ -88,80 +148,91 @@ export const getOrphanEmployee = async (req, res) => {
         })
     }
 }
-export const updateUserRole = async (req, res) => {
-    //Create and start session
-    const session = await mongoose.startSession();
 
+export const updateUserRole = async (req, res) => {
+    const session = await mongoose.startSession();
     try {
         session.startTransaction();
-        const { userId, roleName } = req.body;
-        const user = await User.findById(userId).populate('role');
-        const targetRole = await Role.findOne({ name: roleName });
 
-        if (!user){
-            await session.abortTransaction();
-            await session.endSession();
-            return res.status(404).json({ success: false, message: "User not found" });
+        const { userId, roleName } = req.body;
+
+        const user = await User
+            .findById(userId)
+            .select('role username')
+            .populate({ path: 'role', select: 'name' })
+            .session(session);
+
+        if (!user) {
+            throw new Error('User not found');
         }
-        if (!targetRole){
-            await session.abortTransaction();
-            await session.endSession();
-            return res.status(400).json({ success: false, message: "No such role" });
+
+        const targetRole = await Role
+            .findOne({ name: roleName })
+            .session(session);
+
+        if (!targetRole) {
+            throw new Error('Role not found');
         }
+
         const currentRole = user.role.name;
+
         if (currentRole === roleName) {
-            await session.abortTransaction();
-            await session.endSession();
-            return res.status(400).json({ success: false, message: "User already has this role" });
+            throw new Error('User already has this role');
         }
-        let notification = "";
+
+        let notification = '';
         let isPromoted = false;
-        // Case1 : Hạ cấp
+
+        /* ===== DEMOTE MANAGER ===== */
         if (currentRole === 'manager' && roleName !== 'manager') {
-            // Clear quản lý của những employees có quản lý bị hạ cấp
-            const subordinates = await User.updateMany(
+            await User.updateMany(
                 { manager: user._id },
                 { $unset: { manager: "" } },
-                {session}
+                { session }
             );
-            notification = `Demote successfully`;
+            notification = 'Demoted successfully';
         }
-        // Case2 : Thăng cấp
-        else if (currentRole === 'employee' && (roleName === 'manager')) {
+
+        /* ===== PROMOTE EMPLOYEE ===== */
+        if (currentRole === 'employee' && roleName === 'manager') {
             isPromoted = true;
-            notification = `Promote successfully`;
+            notification = 'Promoted successfully';
         }
-        else {
-            notification = `User role updated from ${currentRole} to ${roleName}.`;
-        }
-        user.role = targetRole._id;
-        await user.save({session});
-        //commit and end session
+
+        /* ===== UPDATE ROLE + REMOVE MANAGER FIELD ===== */
+        await User.updateOne(
+            { _id: user._id },
+            {
+                $set: { role: targetRole._id },
+                $unset: { manager: "" }
+            },
+            { session }
+        );
+
         await session.commitTransaction();
-        await session.endSession();
+        session.endSession();
 
         return res.status(200).json({
             success: true,
-            message: notification,
-            isPromoted : isPromoted ,
+            message: notification || `Role updated from ${currentRole} to ${roleName}`,
+            isPromoted,
             data: {
                 username: user.username,
                 from: currentRole,
                 to: roleName
             }
         });
+
     } catch (err) {
-        //rollback
         await session.abortTransaction();
-        await session.endSession();
+        session.endSession();
+
         return res.status(500).json({
             success: false,
-            message: err.message,
+            message: err.message
         });
     }
 };
-
-
 
 export const assignEmployeesToManager = async (req, res) => {
     // Input : list of employee's ids and a manager's id .

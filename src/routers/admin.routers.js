@@ -6,10 +6,10 @@ import {checkSignupRequirements , checkRoleExisted } from "../middlewares/verify
 import {authorize} from "../middlewares/authorize.js";
 import {
     assignEmployeesToManager, deleteStaff,
-    getAll,
+    getAll, getOverViewInfo,
     getOrphanEmployee,
     updateUserRole,
-    register,getManagers
+    register, getManagers, getEmployees
 } from "../controllers/admin.controller.js";
 export const adminRouter = express.Router();
 adminRouter.use(express.json());
@@ -26,6 +26,11 @@ adminRouter.get("/staffs/getAll",
     authorize(['admin']),
     getAll
 )
+adminRouter.get("/staffs/overview",
+    verifyToken,
+    authorize(['admin']),
+    getOverViewInfo
+    )
 adminRouter.put("/staffs/update_role",
     verifyToken,
     authorize(['admin']),
@@ -46,3 +51,7 @@ adminRouter.get("/staffs/managers",
     verifyToken,
     authorize(['admin']),
     getManagers)
+adminRouter.get("/staffs/employees",
+    verifyToken,
+    authorize(['admin']),
+    getEmployees)

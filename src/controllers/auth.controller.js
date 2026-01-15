@@ -29,14 +29,13 @@ export const login = async (req, res) => {
                 }
             })
         }
-
         const token = jwt.sign({id : user.id}, config.secretKey, {
             expiresIn: config.expiresIn,
             algorithm: "HS256",
         })
         const refreshToken = jwt.sign({ id: user.id }, config.refreshKey, {
             algorithm: "HS256",
-            expiresIn: '1d', // 24 hours
+            expiresIn: '1d',
         });
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
@@ -78,7 +77,9 @@ export const refreshToken = (req, res) => {
         )
         res.json({ accessToken: newAccessToken })
     } catch {
-        return res.status(401).json({ message: 'Refresh token expired' })
+        return res.status(403).json({
+            message: 'Refresh token expired'
+        })
     }
 }
 
