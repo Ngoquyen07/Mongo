@@ -4,5 +4,5 @@ export const validateLogin = z.object({
         .trim()
         .email("Email is not valid"),
     password: z.string("Password is required")
-        .min(6, "Password must be at least 6 characters long"),
+       ,
 })

@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser'
 import {authRouter} from './routers/auth.routers.js';
 import {rootRouter} from "./routers/index.js";
+import {verifyToken} from "./middlewares/authJwt.js";
 export const app = express();
 app.use(express.json())
 app.use(cors({
@@ -13,4 +14,4 @@ app.use(cors({
 }));
 app.use(cookieParser())
 app.use(authRouter)
-app.use('/api',rootRouter)
+app.use('/api',verifyToken,rootRouter)

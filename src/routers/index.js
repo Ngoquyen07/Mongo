@@ -1,4 +1,10 @@
 import express from 'express';
 import {adminRouter} from "./admin.routers.js";
+import {managerRouter} from "./manager.routers.js";
+import validate from "../middlewares/validate.js";
+import {authorize} from "../middlewares/authorize.js";
+import {employeeRouter} from "./employee.routers.js";
 export const rootRouter = express.Router();
-rootRouter.use('/admin', adminRouter);
+rootRouter.use('/admin', authorize(['admin']), adminRouter);
+rootRouter.use('/manager',authorize(['manager']) ,managerRouter);
+rootRouter.use('/employee',authorize(['employee']) ,employeeRouter);
