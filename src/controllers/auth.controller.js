@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import {User} from "../models/User.model.js";
-import {Role} from "../models/Role.model.js";
 import config from "../config/auth.js";
 
 export const login = async (req, res) => {
@@ -35,7 +34,7 @@ export const login = async (req, res) => {
         })
         const refreshToken = jwt.sign({ id: user.id }, config.refreshKey, {
             algorithm: "HS256",
-            expiresIn: '1d',
+            expiresIn: '2h',
         });
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
@@ -67,18 +66,18 @@ export const refreshToken = (req, res) => {
     if (!refreshToken) {
         return res.status(401).json({ message: 'No refresh token' })
     }
-
     try {
         const payload = jwt.verify(refreshToken, config.refreshKey)
         const newAccessToken = jwt.sign(
             { id: payload.id},
             config.secretKey,
-            { expiresIn: config.expiresIn }
+            { expiresIn: config.expiresIn  , algorithm: "HS256",}
         )
         res.json({ accessToken: newAccessToken })
-    } catch {
+    } catch(err) {
         return res.status(403).json({
-            message: 'Refresh token expired'
+            message: 'Refresh token expired',
+            errors : err
         })
     }
 }

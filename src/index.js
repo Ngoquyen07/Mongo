@@ -1,9 +1,8 @@
 import 'dotenv/config';
 import {app} from "./app.js";
-const PORT = process.env.PORT || 8000;
 import {connectDB} from "./config/database.js";
 import {Role} from "./models/Role.model.js";
-
+const PORT = process.env.PORT || 8000;
 const startServer = async () => {
     try{
         await connectDB();
