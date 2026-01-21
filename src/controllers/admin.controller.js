@@ -107,24 +107,49 @@ export const getEmployees = async(req,res)=>{
     }
 }
 
-export const getManagers = async(req,res)=>{
-    try{
+export const getManagers = async (req, res) => {
+    try {
+        // 1. Lấy tham số từ query (mặc định page 1, limit 10)
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
         const managerRoleName = await Role.findOne({ name: 'manager' });
-        const managers = await User.find({
-            role: managerRoleName._id
-        }).populate('role').populate('employees')
+
+        if (!managerRoleName) {
+            return res.status(404).json({ success: false, message: 'Role not found' });
+        }
+
+        // 2. Thực hiện truy vấn đồng thời
+        const [managers, totalManagers] = await Promise.all([
+            User.find({ role: managerRoleName._id })
+                .populate('role')
+                .populate('employees')
+                .sort({ createdAt: -1 }) // Sắp xếp mới nhất lên đầu
+                .skip(skip)
+                .limit(limit),
+            User.countDocuments({ role: managerRoleName._id })
+        ]);
+
+        const totalPages = Math.ceil(totalManagers / limit);
+
         return res.status(200).json({
             success: true,
-            data: managers
-        })
-    }
-    catch(err){
+            data: managers,
+            pagination: {
+                totalItems: totalManagers,
+                totalPages: totalPages,
+                currentPage: page,
+                limit: limit
+            }
+        });
+    } catch (err) {
         return res.status(400).send({
             success: false,
             message: err.message,
-        })
+        });
     }
-}
+};
 export const getOrphanEmployee = async (req, res) => {
     try{
         const employeeRole = await Role.findOne({ name: 'employee' });
